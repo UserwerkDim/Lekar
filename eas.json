@@ -1,0 +1,27 @@
+{
+  "cli": {
+    "version": ">= 3.13.1"
+  },
+  "build": {
+    "preview": {
+      "distribution": "internal",
+      "android": {
+        "buildType": "apk",
+        "image": "ubuntu-22.04-jdk-17-ndk-r23c"
+      },
+      "ios": {
+        "simulator": true
+      }
+    },
+    "production": {
+      "distribution": "store",
+      "android": {
+        "gradleCommand": ":app:bundleRelease",
+        "image": "ubuntu-22.04-jdk-17-ndk-r23c"
+      }
+    }
+  },
+  "submit": {
+    "production": {}
+  }
+}
