@@ -1,0 +1,206 @@
+diff --git a/node_modules/expo-modules-core/android/src/main/java/expo/modules/adapters/react/permissions/PermissionsService.kt b/node_modules/expo-modules-core/android/src/main/java/expo/modules/adapters/react/permissions/PermissionsService.kt
+index ae0a811..448333d 100644
+--- a/node_modules/expo-modules-core/android/src/main/java/expo/modules/adapters/react/permissions/PermissionsService.kt
++++ b/node_modules/expo-modules-core/android/src/main/java/expo/modules/adapters/react/permissions/PermissionsService.kt
+@@ -87,39 +87,38 @@ open class PermissionsService(val context: Context) : InternalModule, Permission
+     )
+   }
+ 
++  // реализация интерфейсного метода из Permissions
+   override fun askForPermissionsWithPromise(promise: Promise, vararg permissions: String) {
++    val perms = permissions?.asList() ?: emptyList()
+     askForPermissions(
+       PermissionsResponseListener {
+-        getPermissionsWithPromise(promise, *permissions)
++        getPermissionsWithPromise(promise, *perms.toTypedArray())
+       },
+-      *permissions
++      *perms.toTypedArray()
+     )
+   }
+ 
+   override fun getPermissions(responseListener: PermissionsResponseListener, vararg permissions: String) {
++    val perms = permissions?.asList() ?: emptyList()
+     responseListener.onResult(
+       parseNativeResult(
+-        permissions,
+-        permissions.map {
+-          if (isPermissionGranted(it)) {
+-            PackageManager.PERMISSION_GRANTED
+-          } else {
+-            PackageManager.PERMISSION_DENIED
+-          }
+-        }.toIntArray()
++        perms.toTypedArray(),
++        perms.map { if (isPermissionGranted(it)) PackageManager.PERMISSION_GRANTED else PackageManager.PERMISSION_DENIED }.toIntArray()
+       )
+     )
+   }
+ 
+   @Throws(IllegalStateException::class)
+   override fun askForPermissions(responseListener: PermissionsResponseListener, vararg permissions: String) {
+-    if (permissions.isEmpty()) {
++    val perms = permissions?.asList() ?: emptyList()
++
++    if (perms.isEmpty()) {
+       responseListener.onResult(mutableMapOf())
+       return
+     }
+ 
+-    if (permissions.contains(Manifest.permission.WRITE_SETTINGS)) {
+-      val permissionsToAsk = permissions.toMutableList().apply { remove(Manifest.permission.WRITE_SETTINGS) }.toTypedArray()
++    if (perms.contains(Manifest.permission.WRITE_SETTINGS)) {
++      val permissionsToAsk = perms.filter { it != Manifest.permission.WRITE_SETTINGS }.toTypedArray()
+       val newListener = PermissionsResponseListener {
+         val status = if (hasWriteSettingsPermission()) {
+           PackageManager.PERMISSION_GRANTED
+@@ -141,7 +140,6 @@ open class PermissionsService(val context: Context) : InternalModule, Permission
+         addToAskedPermissionsCache(arrayOf(Manifest.permission.WRITE_SETTINGS))
+         askForWriteSettingsPermissionFirst()
+       } else {
+-        // User only ask for `WRITE_SETTINGS`, we can already return response
+         if (permissionsToAsk.isEmpty()) {
+           newListener.onResult(mutableMapOf())
+           return
+@@ -149,17 +147,15 @@ open class PermissionsService(val context: Context) : InternalModule, Permission
+         askForManifestPermissions(permissionsToAsk, newListener)
+       }
+     } else {
+-      askForManifestPermissions(permissions, responseListener)
++      askForManifestPermissions(perms.toTypedArray(), responseListener)
+     }
+   }
+ 
+   override fun hasGrantedPermissions(vararg permissions: String): Boolean {
+-    return permissions.all { isPermissionGranted(it) }
++    val perms = permissions?.asList() ?: emptyList()
++    return perms.all { isPermissionGranted(it) }
+   }
+ 
+-  /**
+-   * Checks whether given permission is present in AndroidManifest or not.
+-   */
+   override fun isPermissionPresentInManifest(permission: String): Boolean {
+     try {
+       context.packageManager.getPackageInfo(context.packageName, PackageManager.GET_PERMISSIONS)?.run {
+@@ -171,32 +167,19 @@ open class PermissionsService(val context: Context) : InternalModule, Permission
+     }
+   }
+ 
+-  /**
+-   * Checks status for Android built-in permission
+-   *
+-   * @param permission [android.Manifest.permission]
+-   */
+   private fun isPermissionGranted(permission: String): Boolean {
+     return when (permission) {
+-      // we need to handle this permission in different way
+       Manifest.permission.WRITE_SETTINGS -> hasWriteSettingsPermission()
+       else -> getManifestPermission(permission) == PackageManager.PERMISSION_GRANTED
+     }
+   }
+ 
+-  /**
+-   * Gets status for Android built-in permission
+-   *
+-   * @param permission [android.Manifest.permission]
+-   */
+   private fun getManifestPermission(permission: String): Int {
+     mActivityProvider?.currentActivity?.let {
+       if (it is PermissionAwareActivity) {
+         return ContextCompat.checkSelfPermission(it, permission)
+       }
+     }
+-
+-    // We are in the headless mode. So, we ask current context.
+     return getManifestPermissionFromContext(permission)
+   }
+ 
+@@ -226,11 +209,7 @@ open class PermissionsService(val context: Context) : InternalModule, Permission
+     }
+     return PermissionsResponse(
+       status,
+-      if (status == PermissionsStatus.DENIED) {
+-        canAskAgain(permission)
+-      } else {
+-        true
+-      }
++      if (status == PermissionsStatus.DENIED) canAskAgain(permission) else true
+     )
+   }
+ 
+@@ -238,12 +217,6 @@ open class PermissionsService(val context: Context) : InternalModule, Permission
+     delegateRequestToActivity(permissions, listener)
+   }
+ 
+-  /**
+-   * Asks for Android built-in permission
+-   * According to Android documentation [android.Manifest.permission.WRITE_SETTINGS] need to be handled in different way
+-   *
+-   * @param permissions [android.Manifest.permission]
+-   */
+   protected fun delegateRequestToActivity(permissions: Array<out String>, listener: PermissionsResponseListener) {
+     addToAskedPermissionsCache(permissions)
+ 
+@@ -273,7 +246,6 @@ open class PermissionsService(val context: Context) : InternalModule, Permission
+           mPendingPermissionCalls.poll()?.let { pendingCall ->
+             val activity = mActivityProvider?.currentActivity as? PermissionAwareActivity
+             if (activity == null) {
+-              // clear all pending calls, because we don't have access to the activity instance
+               pendingCall.second.onResult(parseNativeResult(pendingCall.first, IntArray(pendingCall.first.size) { PackageManager.PERMISSION_DENIED }))
+               mPendingPermissionCalls.forEach {
+                 it.second.onResult(parseNativeResult(it.first, IntArray(it.first.size) { PackageManager.PERMISSION_DENIED }))
+@@ -294,17 +266,6 @@ open class PermissionsService(val context: Context) : InternalModule, Permission
+     }
+   }
+ 
+-  /**
+-   * Asking for [android.provider.Settings.ACTION_MANAGE_WRITE_SETTINGS] via separate activity
+-   * WARNING: has to be asked first among all permissions being asked in request
+-   * Scenario that forces this order:
+-   * 1. user asks for "systemBrightness" (actual [android.provider.Settings.ACTION_MANAGE_WRITE_SETTINGS]) and for some other permission (e.g. [android.Manifest.permission.CAMERA])
+-   * 2. first goes ACTION_MANAGE_WRITE_SETTINGS that moves app into background and launches system-specific fullscreen activity
+-   * 3. upon user action system resumes app and [onHostResume] is being called for the first time and logic for other permission is invoked
+-   * 4. other permission invokes other system-specific activity that is visible as dialog what moves app again into background
+-   * 5. upon user action app is restored and [onHostResume] is being called again, but no further action is invoked and promise is resolved
+-   */
+-
+   private fun askForWriteSettingsPermissionFirst() {
+     Intent(Settings.ACTION_MANAGE_WRITE_SETTINGS).apply {
+       data = Uri.parse("package:${context.packageName}")
+@@ -320,28 +281,24 @@ open class PermissionsService(val context: Context) : InternalModule, Permission
+   }
+ 
+   override fun onHostResume() {
+-    if (!mWriteSettingsPermissionBeingAsked) {
+-      return
+-    }
++    if (!mWriteSettingsPermissionBeingAsked) return
+     mWriteSettingsPermissionBeingAsked = false
+ 
+-    // cleanup
+-    val askAsyncListener = mAskAsyncListener!!
+-    val askAsyncRequestedPermissions = mAskAsyncRequestedPermissions!!
++    // сохраняем локально и обнуляем поля
++    val askAsyncListener = checkNotNull(mAskAsyncListener)
++    val pending = mAskAsyncRequestedPermissions
+ 
+     mAskAsyncListener = null
+     mAskAsyncRequestedPermissions = null
+ 
+-    if (askAsyncRequestedPermissions.isNotEmpty()) {
+-      // invoke actual asking for permissions
+-      askForManifestPermissions(askAsyncRequestedPermissions, askAsyncListener)
++    // КРИТИЧЕСКИЙ ФИКС: безопасная проверка массива из Java (platform type)
++    if (!pending.isNullOrEmpty()) {
++      askForManifestPermissions(pending!!, askAsyncListener)
+     } else {
+-      // user asked only for Manifest.permission.WRITE_SETTINGS
+       askAsyncListener.onResult(mutableMapOf())
+     }
+   }
+ 
+   override fun onHostPause() = Unit
+-
+   override fun onHostDestroy() = Unit
+ }

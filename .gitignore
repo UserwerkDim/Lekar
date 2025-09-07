@@ -1,0 +1,6 @@
+node_modules/
+*.jks
+*.keystore
+*.p12
+*.pem
+*.p8

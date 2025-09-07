@@ -1,6 +1,6 @@
 {
   "expo": {
-    "name": "Православная книга",
+    "name": "Душевный лекарь",
     "slug": "orthobooks-app",
     "version": "1.0.0",
     "orientation": "portrait",
@@ -10,15 +10,12 @@
       "resizeMode": "contain",
       "backgroundColor": "#000000"
     },
-    "updates": {
-      "fallbackToCacheTimeout": 0
-    },
-    "assetBundlePatterns": [
-      "**/*"
-    ],
+    "updates": { "fallbackToCacheTimeout": 0 },
+    "assetBundlePatterns": ["**/*"],
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "ru.orthopsy.book"
+      "bundleIdentifier": "ru.orthopsy.book",
+      "infoPlist": { "ITSAppUsesNonExemptEncryption": false }
     },
     "android": {
       "package": "ru.orthopsy.book",
@@ -27,13 +24,26 @@
         "backgroundColor": "#FFFFFF"
       }
     },
-    "web": {
-      "favicon": "./assets/icon.png"
-    },
+    "web": { "favicon": "./assets/icon.png" },
+    "plugins": [
+      [
+        "expo-build-properties",
+        {
+          "ios": { "useFrameworks": "static" },
+          "android": {
+            "compileSdkVersion": 35,
+            "targetSdkVersion": 35,
+            "kotlinVersion": "1.9.24",
+            "gradleProperties": {
+              "android.suppressUnsupportedCompileSdk": "35"
+            }
+          }
+        }
+      ],
+      "./plugins/patchPodfile_v4"
+    ],
     "extra": {
-      "eas": {
-        "projectId": "04c8931a-5540-47c2-9e2d-afc30d2afd5f"
-      }
+      "eas": { "projectId": "04c8931a-5540-47c2-9e2d-afc30d2afd5f" }
     }
   }
 }

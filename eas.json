@@ -1,23 +1,30 @@
 {
   "cli": {
-    "version": ">= 3.13.1"
+    "version": ">= 3.13.1",
+    "appVersionSource": "local"
   },
   "build": {
     "preview": {
       "distribution": "internal",
       "android": {
         "buildType": "apk",
-        "image": "ubuntu-22.04-jdk-17-ndk-r23c"
+        "image": "ubuntu-22.04-jdk-17-ndk-r25b"
       },
       "ios": {
         "simulator": true
+      },
+      "env": {
+        "YARN_IGNORE_ENGINES": "true"
       }
     },
     "production": {
       "distribution": "store",
       "android": {
         "gradleCommand": ":app:bundleRelease",
-        "image": "ubuntu-22.04-jdk-17-ndk-r23c"
+        "image": "ubuntu-22.04-jdk-17-ndk-r25b"
+      },
+      "env": {
+        "YARN_IGNORE_ENGINES": "true"
       }
     }
   },
