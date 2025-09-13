@@ -1,7 +1,16 @@
 diff --git a/node_modules/expo-modules-core/android/src/main/java/expo/modules/adapters/react/permissions/PermissionsService.kt b/node_modules/expo-modules-core/android/src/main/java/expo/modules/adapters/react/permissions/PermissionsService.kt
-index ae0a811..380ee0e 100644
+index ae0a811..676f536 100644
 --- a/node_modules/expo-modules-core/android/src/main/java/expo/modules/adapters/react/permissions/PermissionsService.kt
 +++ b/node_modules/expo-modules-core/android/src/main/java/expo/modules/adapters/react/permissions/PermissionsService.kt
+@@ -34,7 +34,7 @@ open class PermissionsService(val context: Context) : InternalModule, Permission
+   // state holders for asking for writing permissions
+   private var mWriteSettingsPermissionBeingAsked = false // change this directly before calling corresponding startActivity
+   private var mAskAsyncListener: PermissionsResponseListener? = null
+-  private var mAskAsyncRequestedPermissions: Array<out String>? = null
++  private var mAskAsyncRequestedPermissions: Array<out String> = emptyArray()
+ 
+   private val mPendingPermissionCalls: Queue<Pair<Array<out String>, PermissionsResponseListener>> = LinkedList()
+   private var mCurrentPermissionListener: PermissionsResponseListener? = null
 @@ -87,39 +87,38 @@ open class PermissionsService(val context: Context) : InternalModule, Permission
      )
    }
@@ -168,7 +177,7 @@ index ae0a811..380ee0e 100644
    private fun askForWriteSettingsPermissionFirst() {
      Intent(Settings.ACTION_MANAGE_WRITE_SETTINGS).apply {
        data = Uri.parse("package:${context.packageName}")
-@@ -319,29 +280,30 @@ open class PermissionsService(val context: Context) : InternalModule, Permission
+@@ -319,29 +280,27 @@ open class PermissionsService(val context: Context) : InternalModule, Permission
      return Settings.System.canWrite(context.applicationContext)
    }
  
@@ -184,14 +193,13 @@ index ae0a811..380ee0e 100644
 -    // cleanup
 -    val askAsyncListener = mAskAsyncListener!!
 -    val askAsyncRequestedPermissions = mAskAsyncRequestedPermissions!!
-+  // Снимем локальные ссылки и сразу очистим поля
 +  val listener = mAskAsyncListener
 +  val requested = mAskAsyncRequestedPermissions
  
 -    mAskAsyncListener = null
 -    mAskAsyncRequestedPermissions = null
 +  mAskAsyncListener = null
-+  mAskAsyncRequestedPermissions = null
++  mAskAsyncRequestedPermissions = emptyArray()
  
 -    if (askAsyncRequestedPermissions.isNotEmpty()) {
 -      // invoke actual asking for permissions
@@ -200,20 +208,18 @@ index ae0a811..380ee0e 100644
 -      // user asked only for Manifest.permission.WRITE_SETTINGS
 -      askAsyncListener.onResult(mutableMapOf())
 -    }
-+  // Если нет слушателя – делать нечего
 +  if (listener == null) return
 +
-+  // requested может быть null — проверяем явно
-+  if (requested != null && requested.isNotEmpty()) {
++  if (requested.isNotEmpty()) {
 +    askForManifestPermissions(requested, listener)
 +  } else {
-+    // запрашивали только WRITE_SETTINGS или массив пустой
 +    listener.onResult(mutableMapOf())
    }
 +}
  
 -  override fun onHostPause() = Unit
  
++
 +  override fun onHostPause() = Unit
    override fun onHostDestroy() = Unit
  }
